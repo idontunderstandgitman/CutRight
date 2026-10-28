@@ -71,6 +71,29 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 .da{display:flex;gap:10px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
 footer{color:var(--muted);font-size:.82rem;margin-top:20px}
 .pdfopt{margin-top:10px;gap:14px}
+
+.levels{margin:4px 0 14px;max-width:520px}
+.levels .lh{font-size:.92rem}
+.levels output{font-weight:600}
+.track{position:relative;padding-bottom:22px}
+.track input[type=range]{width:100%;margin:6px 0 0}
+.dots{position:absolute;left:0;right:0;top:30px;height:16px}
+.dot{position:absolute;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;border:2px solid var(--card);box-shadow:0 0 0 1px var(--line);padding:0;cursor:pointer}
+.dot.sel{box-shadow:0 0 0 2px var(--ink)}
+.dot:disabled{cursor:not-allowed;opacity:.5}
+.dot.ghost{top:30px;background:transparent;border:2px dashed var(--muted);box-shadow:none;pointer-events:none}
+.track{position:relative}
+#lvHint[hidden]{display:none}
+#lvHint{display:block;color:var(--accent);margin:2px 0 6px;font-weight:600}
+.props{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:6px 0 14px}
+.prop{display:flex;flex-direction:column;gap:4px;text-align:left;border:2px solid var(--line);border-radius:10px;padding:8px;background:var(--bg);font-size:.88rem}
+.prop.sel{background:var(--card);box-shadow:0 0 0 2px var(--ink)}
+.prop svg{width:100%;height:90px;background:var(--sheet);border-radius:6px}
+.prop svg path{stroke:var(--cut);vector-effect:non-scaling-stroke;stroke-width:.8px}
+.prop b{font-size:1rem}
+.prop .m{color:var(--muted)}
+.prop.wait{justify-content:center;align-items:center;color:var(--muted);min-height:150px}
+#stale{color:var(--danger);font-size:.9rem;margin:0 0 10px}
 #info{color:var(--ok);font-size:.92rem;margin-top:10px;min-height:0}
 #listTools{margin-top:10px}
 button.accent{border-color:var(--accent)}
@@ -126,6 +149,18 @@ label.f small{line-height:1.35}
 
   <section id="res" hidden>
     <h2><span class="n">3</span><span data-i="s3"></span></h2>
+    <div class="levels">
+      <div class="lh" data-it="preferTitle"><span data-i="preferLabel"></span> <output id="preferOut"></output></div>
+      <div class="track">
+        <input type="range" id="prefer" min="0" max="40" step="5" value="10" data-it="preferTitle" aria-describedby="preferHelp">
+        <div class="dots" id="dots"></div>
+        <span class="dot ghost" id="ghost" hidden></span>
+      </div>
+      <small class="note" id="lvHint" hidden></small>
+      <small class="note" id="preferHelp" data-i="preferHelp"></small>
+    </div>
+    <div class="props" id="props"></div>
+    <div id="stale" hidden data-i="stale"></div>
     <div class="stats" id="stats"></div>
     <div class="row">
       <button id="dDxf" class="primary" data-i="dDxf"></button>
@@ -1770,16 +1805,16 @@ const Core = (() => {
 
   /* ------------------------------------------------------------------ nästling */
   // tiles: [[w,h]] i rutor. Returnerar [{x,y,w,h,idx,rot}] som maximerar täckt area.
-  function solve(W, H, tiles, rotate) {
+  function solve(W, H, tiles, rotate, weights) {
     const cand = [];
-    tiles.forEach(([w, h], i) => { cand.push([w, h, i, false]); if (rotate && w !== h) cand.push([h, w, i, true]); });
+    tiles.forEach(([w, h], i) => { const wt = weights ? weights[i] : 1; cand.push([w, h, i, false, wt]); if (rotate && w !== h) cand.push([h, w, i, true, wt]); });
     const SC = 1000, S = H + 1;
     const f = new Float64Array((W + 1) * S), kind = new Uint8Array((W + 1) * S), arg = new Int32Array((W + 1) * S);
     for (let w = 1; w <= W; w++) for (let h = 1; h <= H; h++) {
       let best = 0, bk = 0, ba = -1;
       for (let ci = 0; ci < cand.length; ci++) {
         const c = cand[ci];
-        if (c[0] <= w && c[1] <= h) { const v = c[0] * c[1] * SC - 1; if (v > best) { best = v; bk = 0; ba = ci; } }
+        if (c[0] <= w && c[1] <= h) { const v = c[0] * c[1] * SC * c[4] - 1; if (v > best) { best = v; bk = 0; ba = ci; } }
       }
       for (let a = 1, m = w >> 1; a <= m; a++) { const v = f[a * S + h] + f[(w - a) * S + h]; if (v > best) { best = v; bk = 1; ba = a; } }
       for (let b = 1, m = h >> 1; b <= m; b++) { const v = f[w * S + b] + f[w * S + h - b]; if (v > best) { best = v; bk = 2; ba = b; } }
@@ -1800,13 +1835,32 @@ const Core = (() => {
 
   // patterns: [{name,loops,w,h}], opts: {W,H,gap,margin,rotate}
   function nest(patterns, opts) {
-    const { W: WW, H: WH, gap, margin, rotate } = opts;
+    const { W: WW, H: WH, gap, margin, rotate, prefer } = opts;
     const uw = WW - 2 * margin + gap, uh = WH - 2 * margin + gap;
     let res = 0.5;
     while ((uw / res) * (uh / res) > 800000) res += 0.5;
-    const W = Math.floor(uw / res + 1e-9), H = Math.floor(uh / res + 1e-9);
-    const tiles = patterns.map(p => [Math.ceil((p.w + gap) / res - 1e-9), Math.ceil((p.h + gap) / res - 1e-9)]);
-    const placed = solve(W, H, tiles, rotate).sort((a, b) => a.y - b.y || a.x - b.x);
+    const areas = patterns.map(p => p.w * p.h), amax = Math.max(...areas);
+    const run = (r, g) => { // g = storleksfavorisering (0 = ren areamaximering)
+      const GW = Math.floor(uw / r + 1e-9), GH = Math.floor(uh / r + 1e-9);
+      const tiles = patterns.map(p => [Math.ceil((p.w + gap) / r - 1e-9), Math.ceil((p.h + gap) / r - 1e-9)]);
+      const placed = solve(GW, GH, tiles, rotate, areas.map(a => Math.pow(a / amax, g)));
+      let used = 0; for (const q of placed) used += areas[q.idx];
+      return { placed, used };
+    };
+    // Storleksföredrag: acceptera upp till `prefer` (0.10 = 10 %) lägre täckning om delarna blir större.
+    const cache = opts.cache || {};
+    const best0 = cache.best0 || (cache.best0 = run(res, 0));
+    let chosen = best0;
+    if (prefer > 0 && patterns.length > 1) {
+      const resC = Math.max(res, 1), c0 = resC === res ? best0 : (cache.c0 || (cache.c0 = run(resC, 0))), targetC = c0.used / (1 + prefer);
+      let lo = 0, hi = 8;
+      if (run(resC, hi).used >= targetC) lo = hi;
+      else for (let i = 0; i < 7; i++) { const mid = (lo + hi) / 2; if (run(resC, mid).used >= targetC) lo = mid; else hi = mid; }
+      const target = best0.used / (1 + prefer);
+      let g = lo;
+      for (let i = 0; i < 6 && g > 0; i++) { const r = run(res, g); if (r.used >= target) { chosen = r; break; } g *= 0.7; }
+    }
+    const placed = chosen.placed.sort((a, b) => a.y - b.y || a.x - b.x);
     const parts = placed.map(p => {
       const pat = patterns[p.idx];
       const ox = margin + p.x * res, oy = margin + p.y * res;
@@ -1821,7 +1875,7 @@ const Core = (() => {
     });
     const counts = patterns.map(() => 0); let used = 0;
     for (const p of parts) { counts[p.idx]++; used += patterns[p.idx].w * patterns[p.idx].h; }
-    return { parts, counts, used, total: WW * WH, res };
+    return { parts, counts, used, total: WW * WH, res, bestPossible: best0.used };
   }
 
   /* ------------------------------------------------------------------ export */
@@ -1885,7 +1939,7 @@ const Core = (() => {
 <script>
 'use strict';
 const $ = (id) => document.getElementById(id);
-const state = { patterns: [], nextId: 1, result: null, stlQueue: [], info: null };
+const state = { patterns: [], nextId: 1, result: null, stlQueue: [], info: null, run: null, levels: new Map(), sel: 10, stale: false };
 const fmt = (v, d = 1) => lang === 'sv' ? v.toFixed(d).replace('.', ',') : v.toFixed(d);
 /* ---------- språk / language ---------- */
 const I18N = {
@@ -1922,6 +1976,9 @@ const I18N = {
     stlNone: 'The face gave no outline – try another face.', stlFail: 'Could not compute the face: ',
     cover: 'of the workpiece is covered ({0} parts)', pcs: 'pcs', notUsed: 'not used in this layout',
     filePrefix: 'nested_', locale: 'en-US',
+    preferLabel: 'Prefer bigger parts:', preferOut: 'accept up to {0} % less coverage', preferTitle: 'Choose bigger parts even if they cover less of the workpiece. 0 = only maximise the covered area. At 10, a layout with smaller parts is only chosen if it covers more than 10 % more area than the best layout with bigger parts.', preferHelp: 'Higher = bigger parts but less material used. 0 = use as much of the material as possible with any mix of sizes. Move the slider to a level, then click the handle once more to generate it – each generated level gets a coloured dot and a proposal.',
+    smallerCould: 'With smaller parts up to {0} % could be covered – the slider chose bigger parts instead.',
+    stale: 'Inputs changed – press "Fill the workpiece" again to update the proposals.', sameAs: 'same layout as {0} %', unusedN: '{0} other designs are not used in this layout.', partsN: '{0} parts', lvHint: '{0} % is not generated yet – click the slider handle once more to generate it.',
     stlAuto: 'Use + find same face on {0} more', stlAutoTitle: 'Uses this face and looks for the same face (same direction, same relative position) on the remaining STL files, then adds them all as designs. Works when the models have the same orientation. Files where no match is found open for manual selection.',
     saveDxf: 'Save as DXF', zipAll: 'Save all STL designs as ZIP of DXF files',
     warnLoops: 'Found {0} contours, the first face had {1} – check this one.',
@@ -1961,6 +2018,9 @@ const I18N = {
     stlNone: 'Ytan gav ingen kontur – prova en annan yta.', stlFail: 'Kunde inte räkna ut ytan: ',
     cover: 'av arbetsstycket täcks ({0} delar)', pcs: 'st', notUsed: 'används inte i denna layout',
     filePrefix: 'nastlad_', locale: 'sv-SE',
+    preferLabel: 'Föredra större delar:', preferOut: 'acceptera upp till {0} % lägre täckning', preferTitle: 'Välj större delar även om de täcker mindre av arbetsstycket. 0 = maximera bara den täckta ytan. Vid 10 väljs en layout med mindre delar bara om den täcker mer än 10 % mer yta än den bästa layouten med större delar.', preferHelp: 'Högre = större delar men mindre utnyttjat material. 0 = utnyttja materialet så mycket som möjligt med valfri blandning av storlekar. Flytta reglaget till en nivå och klicka sedan på handtaget en gång till för att generera den – varje genererad nivå får en färgad prick och ett förslag.',
+    smallerCould: 'Med mindre delar hade upp till {0} % kunnat täckas – reglaget valde större delar i stället.',
+    stale: 'Inmatningen har ändrats – tryck på "Fyll arbetsstycket" igen för att uppdatera förslagen.', sameAs: 'samma layout som {0} %', unusedN: '{0} andra mönster används inte i den här layouten.', partsN: '{0} delar', lvHint: '{0} % är inte genererad än – klicka på reglagets handtag en gång till för att generera den.',
     stlAuto: 'Använd + hitta samma yta på {0} till', stlAutoTitle: 'Använder den här ytan och letar upp samma yta (samma riktning, samma relativa läge) på de övriga STL-filerna, och lägger till alla som mönster. Fungerar när modellerna har samma orientering. Filer utan träff öppnas för manuellt val.',
     saveDxf: 'Spara som DXF', zipAll: 'Spara alla STL-mönster som ZIP med DXF-filer',
     warnLoops: 'Hittade {0} konturer, första ytan hade {1} – kontrollera den här.',
@@ -1980,8 +2040,10 @@ function applyStatic() {
   document.querySelectorAll('[data-ia]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.ia)); });
   document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
   if (!$('go').disabled) $('go').textContent = t('go');
-  updateAutoBtn(); renderInfo();
+  updateAutoBtn(); renderInfo(); syncPrefer(); if (state.levels.size) { renderLevels(); levelHint(); }
 }
+function syncPrefer() { $('preferOut').textContent = t('preferOut', parseInt($('prefer').value, 10)); }
+$('prefer').addEventListener('input', syncPrefer);
 
 
 /* ---------- inställningar (bekvämlighet, får saknas) ---------- */
@@ -2022,11 +2084,11 @@ $('list').addEventListener('click', (e) => {
   const sv = e.target.closest('.sv');
   if (sv) { const q = state.patterns.find(x => x.id == sv.dataset.id); if (q) save(Core.toDXF([{ loops: q.loops }]), q.name + '.dxf', 'application/dxf'); return; }
   const b = e.target.closest('.rm'); if (!b) return;
-  state.patterns = state.patterns.filter(p => p.id != b.dataset.id); if (!state.patterns.some(q => q.kind === 'stl')) state.info = null; renderList();
+  markStale(); state.patterns = state.patterns.filter(p => p.id != b.dataset.id); if (!state.patterns.some(q => q.kind === 'stl')) state.info = null; renderList();
 });
 $('list').addEventListener('change', (e) => {
   const p = state.patterns.find(q => q.id == e.target.dataset.id); if (!p) return;
-  if (e.target.classList.contains('inc')) p.include = e.target.checked;
+  markStale(); if (e.target.classList.contains('inc')) p.include = e.target.checked;
   if (e.target.classList.contains('lay')) { p.layer = e.target.value; Object.assign(p, Core.buildPattern(p.polys, p.unit, p.layer)); }
   renderList();
 });
@@ -2060,6 +2122,7 @@ async function addDXF(file) {
   const layers = Core.layerExtents(d.polys);
   const best = Object.keys(layers).sort((a, b) => layers[b].area - layers[a].area)[0];
   const pat = Core.buildPattern(d.polys, d.unit, best);
+  markStale();
   state.patterns.push({ id: state.nextId++, kind: 'dxf', name: file.name, polys: d.polys, unit: d.unit, layers, layer: best, ignored: d.ignored, include: true, ...pat });
 }
 
@@ -2153,9 +2216,9 @@ function closeStl() {
 }
 $('stlClose').onclick = $('stlSkip').onclick = closeStl;
 $('dlg').addEventListener('cancel', (e) => { e.preventDefault(); closeStl(); });
-function addStlPattern(file, pat, refLoops) {
+function addStlPattern(file, pat) {
+  markStale();
   const q = { id: state.nextId++, kind: 'stl', name: file.name.replace(/\.stl$/i, '') + t('faceSuffix'), include: true, ...pat };
-  if (refLoops != null && pat.loops.length !== refLoops) q.warn = [pat.loops.length, refLoops];
   state.patterns.push(q);
 }
 function updateAutoBtn() {
@@ -2179,7 +2242,7 @@ $('stlAuto').onclick = async () => {
       const tri = Core.matchFace(M, sig);
       const q = tri < 0 ? null : Core.faceToPattern(M, Core.faceRegion(M, tri, tol), unit);
       if (!q || !q.loops.length) { failed.push(f); continue; }
-      addStlPattern(f, q, p.loops.length); ok++;
+      addStlPattern(f, q); ok++;
     } catch (err) { failed.push(f); }
     await new Promise(r => setTimeout(r));
   }
@@ -2199,7 +2262,84 @@ function save(text, name, type) {
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
-$('go').onclick = () => {
+const LEVEL_COLORS = ['#0b6bcb', '#d9480f', '#2b8a3e', '#9c36b5', '#c2255c', '#0c8599', '#e67700', '#5f3dc4', '#6b7280'];
+const lvColor = (lv) => LEVEL_COLORS[(lv / 5) % LEVEL_COLORS.length];
+const tick = () => new Promise(r => setTimeout(r, 30));
+
+function computeLevel(lv) {
+  const R = state.run;
+  const r = Core.nest(R.pats, { W: R.W, H: R.H, gap: R.gap, margin: R.margin, rotate: R.rotate, prefer: lv / 100, cache: R.cache });
+  state.levels.set(lv, r); return r;
+}
+function sameLevel(lv) { // lägsta nivå med identisk layout
+  const sig = (r) => r.counts.join(',') + '|' + r.parts.length;
+  const mine = sig(state.levels.get(lv));
+  for (const k of [...state.levels.keys()].sort((a, b) => a - b)) if (k < lv && sig(state.levels.get(k)) === mine) return k;
+  return null;
+}
+function renderLevels(pending) {
+  const box = $('props'); box.innerHTML = '';
+  const keys = [...state.levels.keys()].sort((a, b) => a - b);
+  for (const lv of keys) {
+    const r = state.levels.get(lv), R = state.run, same = sameLevel(lv);
+    const d = document.createElement('button'); d.className = 'prop' + (lv === state.sel ? ' sel' : ''); d.style.borderColor = lvColor(lv);
+    d.dataset.lv = lv; d.type = 'button';
+    d.innerHTML = `<svg viewBox="-1 -1 ${R.W + 2} ${R.H + 2}" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path fill="none" d="${r.parts.map(p => Core.pathD(p.loops, R.H)).join('')}"/></svg>
+      <b style="color:${lvColor(lv)}">${lv} %</b><span>${fmt(100 * r.used / r.total)} % · ${t('partsN', r.parts.length)}</span>${same != null ? `<span class="m">${t('sameAs', same)}</span>` : ''}`;
+    box.appendChild(d);
+  }
+  if (pending != null) { const d = document.createElement('div'); d.className = 'prop wait'; d.textContent = t('calc') + ' ' + pending + ' %'; box.appendChild(d); }
+  // prickar på reglaget
+  const max = +$('prefer').max, dots = $('dots'); dots.innerHTML = '';
+  for (const lv of keys) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'dot' + (lv === state.sel ? ' sel' : ''); b.dataset.lv = lv;
+    b.style.background = lvColor(lv); b.style.left = `calc(8px + (100% - 16px) * ${lv / max})`; b.title = lv + ' %'; b.setAttribute('aria-label', lv + ' %'); b.disabled = state.stale;
+    dots.appendChild(b);
+  }
+}
+function selectLevel(lv, scroll) {
+  const r = state.levels.get(lv); if (!r) return;
+  state.sel = lv; $('prefer').value = lv; syncPrefer(); levelHint();
+  state.result = { r, W: state.run.W, H: state.run.H, pats: state.run.pats };
+  renderLevels(); showResult(!!scroll);
+}
+$('props').addEventListener('click', (e) => { const b = e.target.closest('.prop[data-lv]'); if (b) selectLevel(+b.dataset.lv); });
+$('dots').addEventListener('click', (e) => { const b = e.target.closest('.dot'); if (b && !state.stale) selectLevel(+b.dataset.lv); });
+let pDown = null;
+function levelHint() {
+  const lv = parseInt($('prefer').value, 10);
+  const show = !!state.run && !state.stale && !state.busy && !state.levels.has(lv);
+  $('lvHint').hidden = !show; if (show) $('lvHint').textContent = t('lvHint', lv);
+  const g = $('ghost'); g.hidden = !show;
+  if (show) g.style.left = `calc(8px + (100% - 16px) * ${lv / +$('prefer').max})`;
+}
+async function generateLevel(lv) {
+  state.busy = true; $('prefer').disabled = true; levelHint(); renderLevels(lv); await tick();
+  try { computeLevel(lv); } catch (err) { $('msg').textContent = t('errPrefix') + err.message; }
+  $('prefer').disabled = false; state.busy = false;
+  if (state.levels.has(lv)) selectLevel(lv); else { renderLevels(); levelHint(); }
+}
+// Ett medvetet klick på handtaget (utan att flytta det) genererar nivån; att dra eller klicka på spåret flyttar bara reglaget.
+async function deliberate() {
+  if (!state.run || state.stale || state.busy) return;
+  const lv = parseInt($('prefer').value, 10);
+  if (state.levels.has(lv)) selectLevel(lv); else await generateLevel(lv);
+}
+$('prefer').addEventListener('pointerdown', (e) => { pDown = { v: $('prefer').value, x: e.clientX, y: e.clientY }; });
+$('prefer').addEventListener('pointerup', (e) => {
+  const d = pDown; pDown = null;
+  if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 4 && $('prefer').value === d.v) deliberate();
+});
+$('prefer').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); deliberate(); } });
+$('prefer').addEventListener('input', () => { syncPrefer(); levelHint(); });
+$('prefer').addEventListener('change', () => {
+  const lv = parseInt($('prefer').value, 10);
+  if (state.run && !state.stale && state.levels.has(lv)) selectLevel(lv); else levelHint();
+});
+function markStale() { if (state.levels.size && !state.stale) { state.stale = true; $('stale').hidden = false; renderLevels(); levelHint(); } }
+for (const id of ['W', 'H', 'gap', 'margin', 'rot']) $(id).addEventListener('input', markStale);
+
+$('go').onclick = async () => {
   const msg = $('msg'); msg.textContent = '';
   const W = parseFloat($('W').value), H = parseFloat($('H').value), gap = parseFloat($('gap').value) || 0, margin = parseFloat($('margin').value) || 0;
   const pats = state.patterns.filter(p => p.include && p.loops.length && p.w > 0 && p.h > 0);
@@ -2207,21 +2347,23 @@ $('go').onclick = () => {
   if (!(W > 0 && H > 0)) { msg.textContent = t('enterSize'); return; }
   saveSettings();
   $('go').disabled = true; $('go').textContent = t('calc');
-  setTimeout(() => {
-    try {
-      const r = Core.nest(pats, { W, H, gap, margin, rotate: $('rot').checked });
-      if (!r.parts.length) { msg.textContent = t('noFit'); $('res').hidden = true; return; }
-      state.result = { r, W, H, pats };
-      showResult();
-    } catch (err) { msg.textContent = t('errPrefix') + err.message; }
-    finally { $('go').disabled = false; $('go').textContent = t('go'); }
-  }, 30);
+  state.run = { W, H, gap, margin, rotate: $('rot').checked, pats, cache: {} };
+  state.levels.clear(); state.stale = false; $('stale').hidden = true; state.sel = 10;
+  try {
+    await tick();
+    const first = computeLevel(10);
+    if (!first.parts.length) { msg.textContent = t('noFit'); $('res').hidden = true; state.levels.clear(); return; }
+    $('res').hidden = false; selectLevel(10, true);
+    for (const lv of [0, 20]) { renderLevels(lv); await tick(); computeLevel(lv); renderLevels(); }
+  } catch (err) { msg.textContent = t('errPrefix') + err.message; }
+  finally { $('go').disabled = false; $('go').textContent = t('go'); }
 };
 function showResult(scroll = true) {
   const { r, W, H, pats } = state.result;
   const pct = 100 * r.used / r.total;
-  let rows = pats.map((p, i) => `<tr><td>${r.counts[i]} ${t('pcs')}</td><td>${esc(p.name)}</td><td>${fmt(p.w)} × ${fmt(p.h)} mm${r.counts[i] === 0 ? ` – <span style="color:var(--muted)">${t('notUsed')}</span>` : ''}</td></tr>`).join('');
-  $('stats').innerHTML = `<div><span class="big">${fmt(pct)} %</span> ${t('cover', r.parts.length)}</div><table>${rows}</table>`;
+  const unused = r.counts.filter(n => n === 0).length;
+  let rows = pats.map((p, i) => r.counts[i] === 0 ? '' : `<tr><td>${r.counts[i]} ${t('pcs')}</td><td>${esc(p.name)}</td><td>${fmt(p.w)} × ${fmt(p.h)} mm${r.counts[i] === 0 ? ` – <span style="color:var(--muted)">${t('notUsed')}</span>` : ''}</td></tr>`).join('');
+  $('stats').innerHTML = `<div><span class="big">${fmt(pct)} %</span> ${t('cover', r.parts.length)}</div><table>${rows}</table>${unused ? `<div class="note">${t('unusedN', unused)}</div>` : ''}${r.bestPossible > r.used * 1.001 ? `<div class="note">${t('smallerCould', fmt(100 * r.bestPossible / r.total))}</div>` : ''}`;
   $('prev').innerHTML = Core.toSVG(r.parts, W, H);
   $('res').hidden = false; if (scroll) $('res').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
