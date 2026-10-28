@@ -71,6 +71,9 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 .da{display:flex;gap:10px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
 footer{color:var(--muted);font-size:.82rem;margin-top:20px}
 .pdfopt{margin-top:10px;gap:14px}
+#info{color:var(--ok);font-size:.92rem;margin-top:10px;min-height:0}
+#listTools{margin-top:10px}
+button.accent{border-color:var(--accent)}
 .help{padding:0 16px;margin:0 0 8px;color:var(--muted);font-size:.88rem}
 .help b{color:var(--ink);font-weight:600}
 label.f small{line-height:1.35}
@@ -103,6 +106,8 @@ label.f small{line-height:1.35}
       <input type="file" id="file" accept=".dxf,.stl,.DXF,.STL" multiple hidden>
     </label>
     <div id="list"></div>
+    <div class="row" id="listTools" hidden><button id="zipAll" data-i="zipAll"></button></div>
+    <div id="info" role="status"></div>
     <p class="note" data-i="note1"></p>
   </section>
 
@@ -156,7 +161,8 @@ label.f small{line-height:1.35}
   <div class="da">
     <button id="stlSkip" data-i="skip"></button>
     <button id="stlDl" disabled data-i="dl"></button>
-    <button id="stlUse" class="primary" disabled data-i="use"></button>
+    <button id="stlUse" disabled data-i="use"></button>
+    <button id="stlAuto" class="primary" hidden disabled data-it="stlAutoTitle"></button>
   </div>
 </dialog>
 
@@ -1700,6 +1706,68 @@ const Core = (() => {
     lo.pop(); up.pop(); return lo.concat(up);
   }
 
+
+  /* ------------------------------------------- upprepa ytval på liknande modeller */
+  // Signatur för en vald yta: normalriktning + var klicket låg relativt modellens omslutande box.
+  function faceSignature(M, t0) {
+    const c = [0, 0, 0];
+    for (let k = 0; k < 3; k++) { const v = M.tri[t0 * 3 + k]; for (let a = 0; a < 3; a++) c[a] += M.vpos[v * 3 + a] / 3; }
+    const nc = c.map((x, a) => { const d = M.bbMax[a] - M.bbMin[a]; return d > 1e-9 ? (x - M.bbMin[a]) / d : 0.5; });
+    return { n: [M.nrm[t0 * 3], M.nrm[t0 * 3 + 1], M.nrm[t0 * 3 + 2]], nc };
+  }
+  // Hittar triangeln på en annan modell som bäst motsvarar signaturen (samma normal, samma relativa läge).
+  function matchFace(M, sig, maxAngDeg = 5) {
+    const cosT = Math.cos(maxAngDeg * Math.PI / 180);
+    const span = [0, 1, 2].map(a => M.bbMax[a] - M.bbMin[a]);
+    let best = -1, bd = Infinity;
+    for (let t = 0; t < M.nt; t++) {
+      const d = M.nrm[t * 3] * sig.n[0] + M.nrm[t * 3 + 1] * sig.n[1] + M.nrm[t * 3 + 2] * sig.n[2];
+      if (d < cosT) continue;
+      let s = 0;
+      for (let a = 0; a < 3; a++) {
+        let c = 0; for (let k = 0; k < 3; k++) c += M.vpos[M.tri[t * 3 + k] * 3 + a] / 3;
+        const nc = span[a] > 1e-9 ? (c - M.bbMin[a]) / span[a] : 0.5;
+        s += (nc - sig.nc[a]) ** 2;
+      }
+      if (s < bd) { bd = s; best = t; }
+    }
+    return best;
+  }
+
+  /* ------------------------------------------------------------------ zip (utan komprimering) */
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zip(files) { // files: [{name, data: string}]
+    const enc = new TextEncoder(), parts = [], central = [];
+    const now = new Date();
+    const dtime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const ddate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    let offset = 0;
+    for (const f of files) {
+      const nb = enc.encode(f.name), db = enc.encode(f.data), crc = crc32(db);
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+      lh.setUint16(10, dtime, true); lh.setUint16(12, ddate, true); lh.setUint32(14, crc, true);
+      lh.setUint32(18, db.length, true); lh.setUint32(22, db.length, true); lh.setUint16(26, nb.length, true); lh.setUint16(28, 0, true);
+      parts.push(new Uint8Array(lh.buffer), nb, db);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+      ch.setUint16(12, dtime, true); ch.setUint16(14, ddate, true); ch.setUint32(16, crc, true);
+      ch.setUint32(20, db.length, true); ch.setUint32(24, db.length, true); ch.setUint16(28, nb.length, true);
+      ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), nb);
+      offset += 30 + nb.length + db.length;
+    }
+    let csize = 0; for (const c of central) csize += c.length;
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, csize, true); end.setUint32(16, offset, true);
+    const all = [...parts, ...central, new Uint8Array(end.buffer)];
+    let total = 0; for (const a of all) total += a.length;
+    const out = new Uint8Array(total); let o = 0; for (const a of all) { out.set(a, o); o += a.length; }
+    return out;
+  }
+
   /* ------------------------------------------------------------------ nästling */
   // tiles: [[w,h]] i rutor. Returnerar [{x,y,w,h,idx,rot}] som maximerar täckt area.
   function solve(W, H, tiles, rotate) {
@@ -1810,14 +1878,14 @@ const Core = (() => {
   }
 
   return { parseDXF, layerExtents, buildPattern, normalize, parseSTL, makeMeshIndex, faceRegion, faceToPattern,
-    solve, nest, toDXF, toSVG, toPDF, pathD };
+    solve, nest, toDXF, toSVG, toPDF, pathD, faceSignature, matchFace, zip };
 })();
 
 </script>
 <script>
 'use strict';
 const $ = (id) => document.getElementById(id);
-const state = { patterns: [], nextId: 1, result: null, stlQueue: [] };
+const state = { patterns: [], nextId: 1, result: null, stlQueue: [], info: null };
 const fmt = (v, d = 1) => lang === 'sv' ? v.toFixed(d).replace('.', ',') : v.toFixed(d);
 /* ---------- språk / language ---------- */
 const I18N = {
@@ -1843,9 +1911,9 @@ const I18N = {
     closeAria: 'Close', unitLabel: 'Unit in the STL file', unitInch: 'inch', unitTitle: 'The unit the model was drawn in. Most CAD programs export mm. Check that the size shown below is right.',
     tolLabel: 'Follow rounded edges out to:', tolTitle: 'How far around rounded edges (fillets) the face may follow. The angle is measured between the face you clicked and the surface further out.',
     tolHelp: '<b>How the slider works:</b> <b>1°</b> = only the flat face you clicked. <b>89°</b> = the face may follow a rounded edge all the way out until it is vertical, so the outline gets the full width of the part. Vertical walls (and holes) are never included – they become the outline.',
-    skip: 'Skip', dl: 'Download DXF', use: 'Use as design',
+    skip: 'Skip', dl: 'Save as DXF', use: 'Use as design',
     layer: 'Layer', layerTitle: 'A DXF can contain several views or layers (e.g. front/top/right from CAD). Pick the layer that is the actual cutting design. The layer with the largest extent is picked automatically.', allLayers: '(all layers)',
-    ignored: 'Ignored objects', noGeo: 'No geometry found in the selected layer.', contours: 'contours', fromStl: 'from STL',
+    ignored: 'Ignored objects', noGeo: 'No geometry found in the selected layer.', contours: 'contours', contour1: 'contour', fromStl: 'from STL',
     useIt: 'Use', useTitle: 'Untick to keep the design in the list but not use it in the nesting.', remove: 'Remove', faceSuffix: '-face',
     unknownType: 'unknown file type (use .dxf or .stl)', noGeometry: 'found no geometry',
     addFirst: 'Add at least one design first.', enterSize: 'Enter the workpiece size.', noFit: 'No part fits on the workpiece.', errPrefix: 'Error: ',
@@ -1854,6 +1922,10 @@ const I18N = {
     stlNone: 'The face gave no outline – try another face.', stlFail: 'Could not compute the face: ',
     cover: 'of the workpiece is covered ({0} parts)', pcs: 'pcs', notUsed: 'not used in this layout',
     filePrefix: 'nested_', locale: 'en-US',
+    stlAuto: 'Use + find same face on {0} more', stlAutoTitle: 'Uses this face and looks for the same face (same direction, same relative position) on the remaining STL files, then adds them all as designs. Works when the models have the same orientation. Files where no match is found open for manual selection.',
+    saveDxf: 'Save as DXF', zipAll: 'Save all STL designs as ZIP of DXF files',
+    warnLoops: 'Found {0} contours, the first face had {1} – check this one.',
+    autoDone: 'Same face found automatically on all {1} files.', autoPart: 'Same face found on {0} of {1} files. {2} need manual selection – they open next.',
     'e.ERR_BINARY_DXF': 'Binary DXF is not supported – save as ASCII DXF.', 'e.ERR_STL_PARSE': 'Could not read the STL file.'
   },
   sv: {
@@ -1878,9 +1950,9 @@ const I18N = {
     closeAria: 'Stäng', unitLabel: 'Enhet i STL-filen', unitInch: 'tum', unitTitle: 'Vilken enhet modellen är ritad i. De flesta CAD-program exporterar mm. Kontrollera att måtten som visas nedan stämmer.',
     tolLabel: 'Följ rundade kanter ut till:', tolTitle: 'Hur långt runt rundade kanter (fillets) ytan får följa. Vinkeln mäts mellan ytan där du klickade och ytan längre ut.',
     tolHelp: '<b>Så fungerar reglaget:</b> <b>1°</b> = bara den plana ytan där du klickade. <b>89°</b> = ytan får följa en rundad kant hela vägen ut tills den blir lodrät, så att konturen får delens fulla bredd. Lodräta väggar (och hål) räknas aldrig med – de blir kontur.',
-    skip: 'Hoppa över', dl: 'Ladda ner DXF', use: 'Använd som mönster',
+    skip: 'Hoppa över', dl: 'Spara som DXF', use: 'Använd som mönster',
     layer: 'Lager', layerTitle: 'En DXF kan innehålla flera vyer eller lager (t.ex. front/top/right från CAD). Välj det lager som är själva skärmönstret. Lagret med störst utsträckning väljs automatiskt.', allLayers: '(alla lager)',
-    ignored: 'Ignorerade objekt', noGeo: 'Hittade ingen geometri i valt lager.', contours: 'konturer', fromStl: 'från STL',
+    ignored: 'Ignorerade objekt', noGeo: 'Hittade ingen geometri i valt lager.', contours: 'konturer', contour1: 'kontur', fromStl: 'från STL',
     useIt: 'Använd', useTitle: 'Avmarkera för att behålla mönstret i listan men inte använda det i nästlingen.', remove: 'Ta bort', faceSuffix: '-yta',
     unknownType: 'okänd filtyp (använd .dxf eller .stl)', noGeometry: 'hittade ingen geometri',
     addFirst: 'Lägg till minst ett mönster först.', enterSize: 'Ange arbetsstyckets mått.', noFit: 'Ingen del får plats på arbetsstycket.', errPrefix: 'Fel: ',
@@ -1889,6 +1961,10 @@ const I18N = {
     stlNone: 'Ytan gav ingen kontur – prova en annan yta.', stlFail: 'Kunde inte räkna ut ytan: ',
     cover: 'av arbetsstycket täcks ({0} delar)', pcs: 'st', notUsed: 'används inte i denna layout',
     filePrefix: 'nastlad_', locale: 'sv-SE',
+    stlAuto: 'Använd + hitta samma yta på {0} till', stlAutoTitle: 'Använder den här ytan och letar upp samma yta (samma riktning, samma relativa läge) på de övriga STL-filerna, och lägger till alla som mönster. Fungerar när modellerna har samma orientering. Filer utan träff öppnas för manuellt val.',
+    saveDxf: 'Spara som DXF', zipAll: 'Spara alla STL-mönster som ZIP med DXF-filer',
+    warnLoops: 'Hittade {0} konturer, första ytan hade {1} – kontrollera den här.',
+    autoDone: 'Samma yta hittades automatiskt på alla {1} filer.', autoPart: 'Samma yta hittades på {0} av {1} filer. {2} behöver väljas manuellt – de öppnas härnäst.',
     'e.ERR_BINARY_DXF': 'Binär DXF stöds inte – spara som ASCII-DXF.', 'e.ERR_STL_PARSE': 'Kunde inte tolka STL-filen.'
   }
 };
@@ -1904,6 +1980,7 @@ function applyStatic() {
   document.querySelectorAll('[data-ia]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.ia)); });
   document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
   if (!$('go').disabled) $('go').textContent = t('go');
+  updateAutoBtn(); renderInfo();
 }
 
 
@@ -1927,19 +2004,25 @@ function renderList() {
         `<option value="*"${p.layer === '*' ? ' selected' : ''}>${t('allLayers')}</option></select></label>`;
     }
     const ign = p.ignored && Object.keys(p.ignored).length ? `<div class="warn">${t('ignored')}: ${Object.entries(p.ignored).map(([k, v]) => k + '×' + v).join(', ')}</div>` : '';
+    const wl = p.warn ? `<div class="warn">${t('warnLoops', p.warn[0], p.warn[1])}</div>` : '';
     const empty = p.loops.length === 0 ? `<div class="warn">${t('noGeo')}</div>` : '';
     d.innerHTML = `<svg viewBox="${vb}" aria-hidden="true"><path d="${Core.pathD(p.loops, p.h)}"/></svg>
       <div><div class="name">${esc(p.name)}</div>
-        <div class="meta">${fmt(p.w)} × ${fmt(p.h)} mm · ${p.loops.length} ${t('contours')}${p.kind === 'stl' ? ' · ' + t('fromStl') : ''}</div>${layerSel}${ign}${empty}</div>
+        <div class="meta">${fmt(p.w)} × ${fmt(p.h)} mm · ${p.loops.length} ${t(p.loops.length === 1 ? 'contour1' : 'contours')}${p.kind === 'stl' ? ' · ' + t('fromStl') : ''}</div>${layerSel}${ign}${empty}${wl}</div>
       <div class="act"><label class="meta" title="${esc(t('useTitle'))}"><input type="checkbox" data-id="${p.id}" class="inc"${p.include ? ' checked' : ''}> ${t('useIt')}</label>
-      <button class="link rm" data-id="${p.id}">${t('remove')}</button></div>`;
+      ${p.kind === 'stl' ? `<button class="link sv" data-id="${p.id}">${t('saveDxf')}</button>` : ''}<button class="link rm" data-id="${p.id}">${t('remove')}</button></div>`;
     el.appendChild(d);
   }
+  $('listTools').hidden = state.patterns.filter(q => q.kind === 'stl').length < 2;
+  renderInfo();
 }
+function renderInfo() { $('info').textContent = state.info ? t(state.info.k, ...state.info.a) : ''; }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 $('list').addEventListener('click', (e) => {
+  const sv = e.target.closest('.sv');
+  if (sv) { const q = state.patterns.find(x => x.id == sv.dataset.id); if (q) save(Core.toDXF([{ loops: q.loops }]), q.name + '.dxf', 'application/dxf'); return; }
   const b = e.target.closest('.rm'); if (!b) return;
-  state.patterns = state.patterns.filter(p => p.id != b.dataset.id); renderList();
+  state.patterns = state.patterns.filter(p => p.id != b.dataset.id); if (!state.patterns.some(q => q.kind === 'stl')) state.info = null; renderList();
 });
 $('list').addEventListener('change', (e) => {
   const p = state.patterns.find(q => q.id == e.target.dataset.id); if (!p) return;
@@ -2025,6 +2108,7 @@ function openStl(file, buf) {
 }
 function setStlInfo() {
   if (!V.M) return;
+  updateAutoBtn();
   const p = V.sel != null ? V.pattern : null;
   $('stlInfo').textContent = p ? (p.loops.length ? t('stlSel', fmt(p.w), fmt(p.h), p.loops.length - 1) : t('stlNone')) : t('stlIntro', V.M.nt.toLocaleString(t('locale')));
 }
@@ -2053,7 +2137,7 @@ function updateSelection() {
     V.pattern = Core.faceToPattern(V.M, V.region, parseFloat($('stlUnit').value));
     const p = V.pattern;
     setStlInfo();
-    $('stlDl').disabled = $('stlUse').disabled = !p.loops.length;
+    $('stlDl').disabled = $('stlUse').disabled = !p.loops.length; updateAutoBtn();
   } catch (err) { $('stlInfo').textContent = t('stlFail') + err.message; $('stlDl').disabled = $('stlUse').disabled = true; }
 }
 $('stlTol').addEventListener('input', () => { $('tolOut').textContent = parseInt($('stlTol').value, 10) + '°'; updateSelection(); });
@@ -2069,10 +2153,43 @@ function closeStl() {
 }
 $('stlClose').onclick = $('stlSkip').onclick = closeStl;
 $('dlg').addEventListener('cancel', (e) => { e.preventDefault(); closeStl(); });
+function addStlPattern(file, pat, refLoops) {
+  const q = { id: state.nextId++, kind: 'stl', name: file.name.replace(/\.stl$/i, '') + t('faceSuffix'), include: true, ...pat };
+  if (refLoops != null && pat.loops.length !== refLoops) q.warn = [pat.loops.length, refLoops];
+  state.patterns.push(q);
+}
+function updateAutoBtn() {
+  const n = state.stlQueue.length, a = $('stlAuto');
+  a.hidden = n === 0; a.textContent = t('stlAuto', n); a.disabled = $('stlUse').disabled;
+  $('stlUse').classList.toggle('primary', n === 0); a.classList.toggle('primary', n > 0);
+}
 $('stlUse').onclick = () => {
   const p = V.pattern; if (!p) return;
-  state.patterns.push({ id: state.nextId++, kind: 'stl', name: V.file.name.replace(/\.stl$/i, '') + t('faceSuffix'), include: true, ...p });
+  addStlPattern(V.file, p); closeStl();
+};
+$('stlAuto').onclick = async () => {
+  const p = V.pattern; if (!p || V.sel == null) return;
+  const sig = Core.faceSignature(V.M, V.sel), tol = parseFloat($('stlTol').value), unit = parseFloat($('stlUnit').value);
+  addStlPattern(V.file, p);
+  $('stlAuto').disabled = true;
+  const rest = state.stlQueue.splice(0), failed = []; let ok = 0;
+  for (const f of rest) {
+    try {
+      const M = Core.makeMeshIndex(Core.parseSTL(await f.arrayBuffer()));
+      const tri = Core.matchFace(M, sig);
+      const q = tri < 0 ? null : Core.faceToPattern(M, Core.faceRegion(M, tri, tol), unit);
+      if (!q || !q.loops.length) { failed.push(f); continue; }
+      addStlPattern(f, q, p.loops.length); ok++;
+    } catch (err) { failed.push(f); }
+    await new Promise(r => setTimeout(r));
+  }
+  state.stlQueue.push(...failed);
+  state.info = { k: failed.length ? 'autoPart' : 'autoDone', a: [ok + 1, rest.length + 1, failed.length] };
   closeStl();
+};
+$('zipAll').onclick = () => {
+  const files = state.patterns.filter(q => q.kind === 'stl').map(q => ({ name: q.name + '.dxf', data: Core.toDXF([{ loops: q.loops }]) }));
+  if (files.length) save(Core.zip(files), 'designs_dxf.zip', 'application/zip');
 };
 $('stlDl').onclick = () => { if (V.pattern) save(Core.toDXF([{ loops: V.pattern.loops }]), V.file.name.replace(/\.stl$/i, '') + t('faceSuffix') + '.dxf', 'application/dxf'); };
 
