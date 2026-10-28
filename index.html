@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -74,75 +74,89 @@ footer{color:var(--muted);font-size:.82rem;margin-top:20px}
 .help{padding:0 16px;margin:0 0 8px;color:var(--muted);font-size:.88rem}
 .help b{color:var(--ink);font-weight:600}
 label.f small{line-height:1.35}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.lang{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;background:var(--card);color:var(--muted);flex:none}
+.lang svg{width:16px;height:16px}
+.lang button{border:none;background:none;padding:4px 10px;border-radius:999px;font-size:.82rem;font-weight:600;color:var(--muted)}
+.lang button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 @media (max-width:520px){.pat{grid-template-columns:56px 1fr}.pat svg{width:56px;height:56px}.pat .act{grid-column:1/-1;flex-direction:row;justify-content:space-between}}
 </style>
 </head>
 <body>
 <main>
-  <h1>DXF-nästlare</h1>
-  <p class="lead">Fyll ett arbetsstycke med så många kopior av dina mönster som möjligt. Allt körs i webbläsaren – inga filer skickas någonstans.</p>
+  <div class="top">
+    <div>
+      <h1 data-i="title"></h1>
+      <p class="lead" data-i="lead"></p>
+    </div>
+    <div class="lang" role="group" aria-label="Language / Språk">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>
+      <button id="langEn" data-lang="en" aria-pressed="true" title="English">EN</button>
+      <button id="langSv" data-lang="sv" aria-pressed="false" title="Svenska">SV</button>
+    </div>
+  </div>
 
   <section>
-    <h2><span class="n">1</span>Mönster</h2>
+    <h2><span class="n">1</span><span data-i="s1"></span></h2>
     <label class="drop" id="drop" tabindex="0">
-      <b>Släpp DXF- eller STL-filer här</b><br>eller klicka för att välja. Flera filer går bra.
+      <b data-i="dropMain"></b><br><span data-i="dropSub"></span>
       <input type="file" id="file" accept=".dxf,.stl,.DXF,.STL" multiple hidden>
     </label>
     <div id="list"></div>
-    <p class="note">STL: du får välja vilken yta som ska bli 2D-mönster. DXF med flera vyer (front/top/right) – lagret med störst utsträckning väljs automatiskt.</p>
+    <p class="note" data-i="note1"></p>
   </section>
 
   <section>
-    <h2><span class="n">2</span>Arbetsstycke</h2>
+    <h2><span class="n">2</span><span data-i="s2"></span></h2>
     <div class="grid">
-      <label class="f" title="Arbetsstyckets mått. Vilken sida som är bredd eller höjd spelar ingen roll – delarna får ändå vridas om rotation är tillåten.">Bredd (mm)<input type="number" id="W" value="246" min="1" step="any" inputmode="decimal"><small>Materialbitens ena sida.</small></label>
-      <label class="f" title="Arbetsstyckets mått.">Höjd (mm)<input type="number" id="H" value="530" min="1" step="any" inputmode="decimal"><small>Materialbitens andra sida.</small></label>
-      <label class="f" title="Avstånd mellan delarna. Skärspåret (kerf) tar bort material och kanterna kan bli varma, så delarna behöver lite luft.">Mellanrum mellan delar (mm)<input type="number" id="gap" value="1" min="0" step="any" inputmode="decimal"><small>Luft mellan grannar så att skärspåret inte kommer åt nästa del. 1 mm är en säker start.</small></label>
-      <label class="f" title="Avstånd mellan yttersta delarna och arbetsstyckets kant. 0 betyder att delar får ligga mot kanten.">Marginal mot kant (mm)<input type="number" id="margin" value="0" min="0" step="any" inputmode="decimal"><small>Fri kant runt hela arbetsstycket, t.ex. om kanten är skadad eller materialet spänns fast. 0 = delar får ligga mot kanten.</small></label>
+      <label class="f" data-it="wTitle"><span data-i="wLabel"></span><input type="number" id="W" value="246" min="1" step="any" inputmode="decimal"><small data-i="wHelp"></small></label>
+      <label class="f" data-it="hTitle"><span data-i="hLabel"></span><input type="number" id="H" value="530" min="1" step="any" inputmode="decimal"><small data-i="hHelp"></small></label>
+      <label class="f" data-it="gapTitle"><span data-i="gapLabel"></span><input type="number" id="gap" value="1" min="0" step="any" inputmode="decimal"><small data-i="gapHelp"></small></label>
+      <label class="f" data-it="marginTitle"><span data-i="marginLabel"></span><input type="number" id="margin" value="0" min="0" step="any" inputmode="decimal"><small data-i="marginHelp"></small></label>
     </div>
-    <label class="chk" title="Tillåter att delar läggs på sidan (vrids 90°) om det ger fler bitar."><input type="checkbox" id="rot" checked><span>Tillåt 90° rotation<small>Delar får vridas 90° om det ger bättre utnyttjande. Stäng av om materialet har ådring eller riktning.</small></span></label>
-    <div class="row" style="margin-top:18px"><button class="primary" id="go">Fyll arbetsstycket</button></div>
+    <label class="chk" data-it="rotTitle"><input type="checkbox" id="rot" checked><span><span data-i="rotLabel"></span><small data-i="rotHelp"></small></span></label>
+    <div class="row" style="margin-top:18px"><button class="primary" id="go" data-i="go"></button></div>
     <div id="msg" role="status"></div>
   </section>
 
   <section id="res" hidden>
-    <h2><span class="n">3</span>Resultat</h2>
+    <h2><span class="n">3</span><span data-i="s3"></span></h2>
     <div class="stats" id="stats"></div>
     <div class="row">
-      <button id="dDxf" class="primary">Ladda ner DXF</button>
-      <button id="dPdf">PDF (1:1)</button>
+      <button id="dDxf" class="primary" data-i="dDxf"></button>
+      <button id="dPdf" data-i="dPdf"></button>
       <button id="dSvg">SVG</button>
     </div>
-    <div class="row pdfopt" title="Gäller bara PDF-filen. Många laserprogram tolkar linjens tjocklek som skära (mycket tunn) eller gravera (tjockare).">
-      <span class="meta">PDF-inställningar:</span>
-      <label class="meta" title="Linjetjocklek i PDF-filen. Ange den tjocklek ditt laserprogram tolkar som skärning.">Linjetjocklek <input type="number" id="pdfW" value="0.01" min="0.001" step="any" style="width:5.5em"> mm</label>
-      <label class="meta" title="Linjefärg i PDF-filen. Många laserprogram sorterar eller ställer in effekt per färg.">Färg <input type="color" id="pdfC" value="#ff0000"></label>
-      <label class="meta" title="Ritar arbetsstyckets kant som en streckad linje. Av som standard, eftersom programmet annars kan skära eller gravera ramen. PDF-sidan har redan arbetsstyckets storlek."><input type="checkbox" id="pdfF"> Rita arbetsstyckets ram</label>
+    <div class="row pdfopt" data-it="pdfTitle">
+      <span class="meta" data-i="pdfOpts"></span>
+      <label class="meta" data-it="pdfWTitle"><span data-i="pdfWLabel"></span> <input type="number" id="pdfW" value="0.01" min="0.001" step="any" style="width:5.5em"> mm</label>
+      <label class="meta" data-it="pdfCTitle"><span data-i="pdfCLabel"></span> <input type="color" id="pdfC" value="#ff0000"></label>
+      <label class="meta" data-it="pdfFTitle"><input type="checkbox" id="pdfF"> <span data-i="pdfFLabel"></span></label>
     </div>
     <div class="preview" id="prev"></div>
-    <p class="note">Rödstreck = skärlinjer. Den streckade ramen är arbetsstycket och finns bara i förhandsvisningen och SVG, inte i DXF-filen (i PDF bara om du kryssar i det). Låt laserprogrammet skära innerhålen före ytterkonturen.</p>
+    <p class="note" data-i="note3"></p>
   </section>
 
-  <footer>Nästlingen är optimal bland snitt-layouter (guillotine) och räknar varje mönster som sin omslutande rektangel. Innehåller three.js (MIT) för 3D-vyn.</footer>
+  <footer data-i="footer"></footer>
 </main>
 
 <dialog id="dlg">
-  <div class="dh"><strong id="stlTitle">STL</strong><button id="stlClose" aria-label="Stäng">✕</button></div>
+  <div class="dh"><strong id="stlTitle">STL</strong><button id="stlClose" data-ia="closeAria">✕</button></div>
   <div id="viewer"></div>
   <div class="dc">
-    <label title="Vilken enhet modellen är ritad i. De flesta CAD-program exporterar mm. Kontrollera att måtten som visas nedan stämmer.">Enhet i STL-filen
-      <select id="stlUnit"><option value="1" selected>mm</option><option value="10">cm</option><option value="25.4">tum</option><option value="1000">m</option></select>
+    <label data-it="unitTitle"><span data-i="unitLabel"></span>
+      <select id="stlUnit"><option value="1" selected>mm</option><option value="10">cm</option><option value="25.4" data-i="unitInch"></option><option value="1000">m</option></select>
     </label>
-    <label title="Hur långt runt rundade kanter (fillets) ytan får följa. Vinkeln mäts mellan ytan där du klickade och ytan längre ut.">Följ rundade kanter ut till: <output id="tolOut">89°</output>
+    <label data-it="tolTitle"><span><span data-i="tolLabel"></span> <output id="tolOut">89°</output></span>
       <input type="range" id="stlTol" min="1" max="89" step="1" value="89">
     </label>
   </div>
-  <p class="help" id="tolHelp"><b>Så fungerar reglaget:</b> <b>1°</b> = bara den plana ytan där du klickade. <b>89°</b> = ytan får följa en rundad kant hela vägen ut tills den blir lodrät, så att konturen får delens fulla bredd. Lodräta väggar (och hål) räknas aldrig med – de blir kontur.</p>
-  <p id="stlInfo">Klicka på den plana yta som ska bli DXF. Dra för att rotera, scrolla för att zooma, högerklicka och dra för att panorera.</p>
+  <p class="help" id="tolHelp" data-ih="tolHelp"></p>
+  <p id="stlInfo"></p>
   <div class="da">
-    <button id="stlSkip">Hoppa över</button>
-    <button id="stlDl" disabled>Ladda ner DXF</button>
-    <button id="stlUse" class="primary" disabled>Använd som mönster</button>
+    <button id="stlSkip" data-i="skip"></button>
+    <button id="stlDl" disabled data-i="dl"></button>
+    <button id="stlUse" class="primary" disabled data-i="use"></button>
   </div>
 </dialog>
 
@@ -1263,7 +1277,7 @@ const Core = (() => {
   const UNIT_MM = { 1: 25.4, 2: 304.8, 3: 1609344, 4: 1, 5: 10, 6: 1000, 7: 1e6, 8: 2.54e-5, 9: 0.0254, 10: 914.4 };
 
   function parseDXF(text) {
-    if (text.startsWith('AutoCAD Binary DXF')) throw new Error('Binär DXF stöds inte – spara som ASCII-DXF.');
+    if (text.startsWith('AutoCAD Binary DXF')) throw new Error('ERR_BINARY_DXF');
     const lines = text.split(/\r?\n/);
     const secs = {}; const header = {};
     let sec = null, cur = null, pending = false, hvar = null;
@@ -1535,7 +1549,7 @@ const Core = (() => {
     const re = /vertex\s+([-+0-9.eE]+)\s+([-+0-9.eE]+)\s+([-+0-9.eE]+)/g;
     const arr = []; let m;
     while ((m = re.exec(txt))) arr.push(+m[1], +m[2], +m[3]);
-    if (arr.length < 9 || arr.length % 9) throw new Error('Kunde inte tolka STL-filen.');
+    if (arr.length < 9 || arr.length % 9) throw new Error('ERR_STL_PARSE');
     return Float32Array.from(arr);
   }
 
@@ -1804,7 +1818,94 @@ const Core = (() => {
 'use strict';
 const $ = (id) => document.getElementById(id);
 const state = { patterns: [], nextId: 1, result: null, stlQueue: [] };
-const fmt = (v, d = 1) => v.toFixed(d).replace('.', ',');
+const fmt = (v, d = 1) => lang === 'sv' ? v.toFixed(d).replace('.', ',') : v.toFixed(d);
+/* ---------- språk / language ---------- */
+const I18N = {
+  en: {
+    title: 'DXF Nester',
+    lead: 'Fill a workpiece with as many copies of your designs as possible. Everything runs in your browser – no files are sent anywhere.',
+    s1: 'Designs', dropMain: 'Drop DXF or STL files here', dropSub: 'or click to choose. Multiple files are fine.',
+    note1: 'STL: you choose which face becomes the 2D design. DXF with several views (front/top/right): the layer with the largest extent is picked automatically.',
+    s2: 'Workpiece',
+    wLabel: 'Width (mm)', wTitle: 'Size of the workpiece. It does not matter which side is width or height – parts may still be rotated if rotation is allowed.', wHelp: 'One side of the material.',
+    hLabel: 'Height (mm)', hTitle: 'Size of the workpiece.', hHelp: 'The other side of the material.',
+    gapLabel: 'Gap between parts (mm)', gapTitle: 'Distance between parts. The cut (kerf) removes material and edges can get hot, so parts need some air.', gapHelp: 'Space between neighbours so the kerf does not reach the next part. 1 mm is a safe start.',
+    marginLabel: 'Margin to edge (mm)', marginTitle: 'Distance between the outermost parts and the workpiece edge. 0 means parts may touch the edge.', marginHelp: 'Free border around the workpiece, e.g. if the edge is damaged or the material is clamped. 0 = parts may touch the edge.',
+    rotLabel: 'Allow 90° rotation', rotTitle: 'Allows parts to be turned on their side (rotated 90°) if that fits more pieces.', rotHelp: 'Parts may be rotated 90° for better use of material. Turn off if the material has a grain or direction.',
+    go: 'Fill the workpiece', calc: 'Calculating…',
+    s3: 'Result', dDxf: 'Download DXF', dPdf: 'PDF (1:1)',
+    pdfOpts: 'PDF settings:', pdfTitle: 'Applies to the PDF file only. Many laser programs read line thickness as cut (very thin) or engrave (thicker).',
+    pdfWLabel: 'Line width', pdfWTitle: 'Line width in the PDF. Enter the width your laser software treats as cutting.',
+    pdfCLabel: 'Colour', pdfCTitle: 'Line colour in the PDF. Many laser programs sort or set power per colour.',
+    pdfFLabel: 'Draw workpiece frame', pdfFTitle: 'Draws the workpiece edge as a dashed line. Off by default, because the software may cut or engrave the frame. The PDF page already has the size of the workpiece.',
+    note3: 'Red lines = cut lines. The dashed frame is the workpiece and appears only in the preview and SVG, not in the DXF (in the PDF only if you tick the box). Holes are written before the outer contour in the file; make sure your laser software cuts inner shapes first.',
+    footer: 'The nesting is optimal among guillotine layouts and treats each design as its bounding rectangle. Includes three.js (MIT) for the 3D view.',
+    closeAria: 'Close', unitLabel: 'Unit in the STL file', unitInch: 'inch', unitTitle: 'The unit the model was drawn in. Most CAD programs export mm. Check that the size shown below is right.',
+    tolLabel: 'Follow rounded edges out to:', tolTitle: 'How far around rounded edges (fillets) the face may follow. The angle is measured between the face you clicked and the surface further out.',
+    tolHelp: '<b>How the slider works:</b> <b>1°</b> = only the flat face you clicked. <b>89°</b> = the face may follow a rounded edge all the way out until it is vertical, so the outline gets the full width of the part. Vertical walls (and holes) are never included – they become the outline.',
+    skip: 'Skip', dl: 'Download DXF', use: 'Use as design',
+    layer: 'Layer', layerTitle: 'A DXF can contain several views or layers (e.g. front/top/right from CAD). Pick the layer that is the actual cutting design. The layer with the largest extent is picked automatically.', allLayers: '(all layers)',
+    ignored: 'Ignored objects', noGeo: 'No geometry found in the selected layer.', contours: 'contours', fromStl: 'from STL',
+    useIt: 'Use', useTitle: 'Untick to keep the design in the list but not use it in the nesting.', remove: 'Remove', faceSuffix: '-face',
+    unknownType: 'unknown file type (use .dxf or .stl)', noGeometry: 'found no geometry',
+    addFirst: 'Add at least one design first.', enterSize: 'Enter the workpiece size.', noFit: 'No part fits on the workpiece.', errPrefix: 'Error: ',
+    stlIntro: 'Model: {0} triangles. Click the flat face that should become the DXF. Drag to rotate, scroll to zoom, right-click and drag to pan.',
+    stlSel: 'Selected face: {0} × {1} mm (rotated to the smallest rectangle), {2} holes/openings. Click another face to change.',
+    stlNone: 'The face gave no outline – try another face.', stlFail: 'Could not compute the face: ',
+    cover: 'of the workpiece is covered ({0} parts)', pcs: 'pcs', notUsed: 'not used in this layout',
+    filePrefix: 'nested_', locale: 'en-US',
+    'e.ERR_BINARY_DXF': 'Binary DXF is not supported – save as ASCII DXF.', 'e.ERR_STL_PARSE': 'Could not read the STL file.'
+  },
+  sv: {
+    title: 'DXF-nästlare',
+    lead: 'Fyll ett arbetsstycke med så många kopior av dina mönster som möjligt. Allt körs i webbläsaren – inga filer skickas någonstans.',
+    s1: 'Mönster', dropMain: 'Släpp DXF- eller STL-filer här', dropSub: 'eller klicka för att välja. Flera filer går bra.',
+    note1: 'STL: du får välja vilken yta som ska bli 2D-mönster. DXF med flera vyer (front/top/right) – lagret med störst utsträckning väljs automatiskt.',
+    s2: 'Arbetsstycke',
+    wLabel: 'Bredd (mm)', wTitle: 'Arbetsstyckets mått. Vilken sida som är bredd eller höjd spelar ingen roll – delarna får ändå vridas om rotation är tillåten.', wHelp: 'Materialbitens ena sida.',
+    hLabel: 'Höjd (mm)', hTitle: 'Arbetsstyckets mått.', hHelp: 'Materialbitens andra sida.',
+    gapLabel: 'Mellanrum mellan delar (mm)', gapTitle: 'Avstånd mellan delarna. Skärspåret (kerf) tar bort material och kanterna kan bli varma, så delarna behöver lite luft.', gapHelp: 'Luft mellan grannar så att skärspåret inte kommer åt nästa del. 1 mm är en säker start.',
+    marginLabel: 'Marginal mot kant (mm)', marginTitle: 'Avstånd mellan yttersta delarna och arbetsstyckets kant. 0 betyder att delar får ligga mot kanten.', marginHelp: 'Fri kant runt hela arbetsstycket, t.ex. om kanten är skadad eller materialet spänns fast. 0 = delar får ligga mot kanten.',
+    rotLabel: 'Tillåt 90° rotation', rotTitle: 'Tillåter att delar läggs på sidan (vrids 90°) om det ger fler bitar.', rotHelp: 'Delar får vridas 90° om det ger bättre utnyttjande. Stäng av om materialet har ådring eller riktning.',
+    go: 'Fyll arbetsstycket', calc: 'Räknar…',
+    s3: 'Resultat', dDxf: 'Ladda ner DXF', dPdf: 'PDF (1:1)',
+    pdfOpts: 'PDF-inställningar:', pdfTitle: 'Gäller bara PDF-filen. Många laserprogram tolkar linjens tjocklek som skära (mycket tunn) eller gravera (tjockare).',
+    pdfWLabel: 'Linjetjocklek', pdfWTitle: 'Linjetjocklek i PDF-filen. Ange den tjocklek ditt laserprogram tolkar som skärning.',
+    pdfCLabel: 'Färg', pdfCTitle: 'Linjefärg i PDF-filen. Många laserprogram sorterar eller ställer in effekt per färg.',
+    pdfFLabel: 'Rita arbetsstyckets ram', pdfFTitle: 'Ritar arbetsstyckets kant som en streckad linje. Av som standard, eftersom programmet annars kan skära eller gravera ramen. PDF-sidan har redan arbetsstyckets storlek.',
+    note3: 'Rödstreck = skärlinjer. Den streckade ramen är arbetsstycket och finns bara i förhandsvisningen och SVG, inte i DXF-filen (i PDF bara om du kryssar i det). Hålen skrivs före ytterkonturen i filen; kontrollera att laserprogrammet skär innerformer först.',
+    footer: 'Nästlingen är optimal bland snitt-layouter (guillotine) och räknar varje mönster som sin omslutande rektangel. Innehåller three.js (MIT) för 3D-vyn.',
+    closeAria: 'Stäng', unitLabel: 'Enhet i STL-filen', unitInch: 'tum', unitTitle: 'Vilken enhet modellen är ritad i. De flesta CAD-program exporterar mm. Kontrollera att måtten som visas nedan stämmer.',
+    tolLabel: 'Följ rundade kanter ut till:', tolTitle: 'Hur långt runt rundade kanter (fillets) ytan får följa. Vinkeln mäts mellan ytan där du klickade och ytan längre ut.',
+    tolHelp: '<b>Så fungerar reglaget:</b> <b>1°</b> = bara den plana ytan där du klickade. <b>89°</b> = ytan får följa en rundad kant hela vägen ut tills den blir lodrät, så att konturen får delens fulla bredd. Lodräta väggar (och hål) räknas aldrig med – de blir kontur.',
+    skip: 'Hoppa över', dl: 'Ladda ner DXF', use: 'Använd som mönster',
+    layer: 'Lager', layerTitle: 'En DXF kan innehålla flera vyer eller lager (t.ex. front/top/right från CAD). Välj det lager som är själva skärmönstret. Lagret med störst utsträckning väljs automatiskt.', allLayers: '(alla lager)',
+    ignored: 'Ignorerade objekt', noGeo: 'Hittade ingen geometri i valt lager.', contours: 'konturer', fromStl: 'från STL',
+    useIt: 'Använd', useTitle: 'Avmarkera för att behålla mönstret i listan men inte använda det i nästlingen.', remove: 'Ta bort', faceSuffix: '-yta',
+    unknownType: 'okänd filtyp (använd .dxf eller .stl)', noGeometry: 'hittade ingen geometri',
+    addFirst: 'Lägg till minst ett mönster först.', enterSize: 'Ange arbetsstyckets mått.', noFit: 'Ingen del får plats på arbetsstycket.', errPrefix: 'Fel: ',
+    stlIntro: 'Modell: {0} trianglar. Klicka på den plana yta som ska bli DXF. Dra för att rotera, scrolla för att zooma, högerklicka och dra för att panorera.',
+    stlSel: 'Vald yta: {0} × {1} mm (roterad till minsta rektangel), {2} hål/öppningar. Klicka på en annan yta för att byta.',
+    stlNone: 'Ytan gav ingen kontur – prova en annan yta.', stlFail: 'Kunde inte räkna ut ytan: ',
+    cover: 'av arbetsstycket täcks ({0} delar)', pcs: 'st', notUsed: 'används inte i denna layout',
+    filePrefix: 'nastlad_', locale: 'sv-SE',
+    'e.ERR_BINARY_DXF': 'Binär DXF stöds inte – spara som ASCII-DXF.', 'e.ERR_STL_PARSE': 'Kunde inte tolka STL-filen.'
+  }
+};
+let lang = 'en';
+try { const l = localStorage.getItem('nest_lang'); if (l === 'sv' || l === 'en') lang = l; } catch (e) {}
+const t = (k, ...a) => (I18N[lang][k] ?? I18N.en[k] ?? k).replace(/\{(\d+)\}/g, (_, i) => a[i]);
+const msgOf = (err) => ('e.' + err.message) in I18N.en ? t('e.' + err.message) : err.message;
+function applyStatic() {
+  document.documentElement.lang = lang; document.title = t('title');
+  document.querySelectorAll('[data-i]').forEach(el => { el.textContent = t(el.dataset.i); });
+  document.querySelectorAll('[data-ih]').forEach(el => { el.innerHTML = t(el.dataset.ih); });
+  document.querySelectorAll('[data-it]').forEach(el => { el.title = t(el.dataset.it); });
+  document.querySelectorAll('[data-ia]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.ia)); });
+  document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+  if (!$('go').disabled) $('go').textContent = t('go');
+}
+
 
 /* ---------- inställningar (bekvämlighet, får saknas) ---------- */
 const KEYS = ['W', 'H', 'gap', 'margin'];
@@ -1821,17 +1922,17 @@ function renderList() {
     let layerSel = '';
     if (p.kind === 'dxf') {
       const names = Object.keys(p.layers).sort((a, b) => p.layers[b].area - p.layers[a].area);
-      layerSel = `<label class="meta" title="En DXF kan innehålla flera vyer eller lager (t.ex. front/top/right från CAD). Välj det lager som är själva skärmönstret. Lagret med störst utsträckning väljs automatiskt.">Lager: <select data-id="${p.id}" class="lay">` +
+      layerSel = `<label class="meta" title="${esc(t('layerTitle'))}">${t('layer')}: <select data-id="${p.id}" class="lay">` +
         names.map(n => `<option value="${esc(n)}"${n === p.layer ? ' selected' : ''}>${esc(n)}</option>`).join('') +
-        `<option value="*"${p.layer === '*' ? ' selected' : ''}>(alla lager)</option></select></label>`;
+        `<option value="*"${p.layer === '*' ? ' selected' : ''}>${t('allLayers')}</option></select></label>`;
     }
-    const ign = p.ignored && Object.keys(p.ignored).length ? `<div class="warn">Ignorerade objekt: ${Object.entries(p.ignored).map(([k, v]) => k + '×' + v).join(', ')}</div>` : '';
-    const empty = p.loops.length === 0 ? '<div class="warn">Hittade ingen geometri i valt lager.</div>' : '';
+    const ign = p.ignored && Object.keys(p.ignored).length ? `<div class="warn">${t('ignored')}: ${Object.entries(p.ignored).map(([k, v]) => k + '×' + v).join(', ')}</div>` : '';
+    const empty = p.loops.length === 0 ? `<div class="warn">${t('noGeo')}</div>` : '';
     d.innerHTML = `<svg viewBox="${vb}" aria-hidden="true"><path d="${Core.pathD(p.loops, p.h)}"/></svg>
       <div><div class="name">${esc(p.name)}</div>
-        <div class="meta">${fmt(p.w)} × ${fmt(p.h)} mm · ${p.loops.length} konturer${p.kind === 'stl' ? ' · från STL' : ''}</div>${layerSel}${ign}${empty}</div>
-      <div class="act"><label class="meta" title="Avmarkera för att behålla mönstret i listan men inte använda det i nästlingen."><input type="checkbox" data-id="${p.id}" class="inc"${p.include ? ' checked' : ''}> Använd</label>
-      <button class="link rm" data-id="${p.id}">Ta bort</button></div>`;
+        <div class="meta">${fmt(p.w)} × ${fmt(p.h)} mm · ${p.loops.length} ${t('contours')}${p.kind === 'stl' ? ' · ' + t('fromStl') : ''}</div>${layerSel}${ign}${empty}</div>
+      <div class="act"><label class="meta" title="${esc(t('useTitle'))}"><input type="checkbox" data-id="${p.id}" class="inc"${p.include ? ' checked' : ''}> ${t('useIt')}</label>
+      <button class="link rm" data-id="${p.id}">${t('remove')}</button></div>`;
     el.appendChild(d);
   }
 }
@@ -1863,8 +1964,8 @@ async function handleFiles(files) {
     try {
       if (ext === 'dxf') await addDXF(f);
       else if (ext === 'stl') state.stlQueue.push(f);
-      else throw new Error('okänd filtyp (använd .dxf eller .stl)');
-    } catch (err) { $('msg').textContent = `${f.name}: ${err.message}`; }
+      else throw new Error(t('unknownType'));
+    } catch (err) { $('msg').textContent = `${f.name}: ${msgOf(err)}`; }
   }
   renderList();
   if (state.stlQueue.length && !$('dlg').open) nextStl();
@@ -1872,7 +1973,7 @@ async function handleFiles(files) {
 
 async function addDXF(file) {
   const d = Core.parseDXF(await file.text());
-  if (!d.polys.length) throw new Error('hittade ingen geometri');
+  if (!d.polys.length) throw new Error(t('noGeometry'));
   const layers = Core.layerExtents(d.polys);
   const best = Object.keys(layers).sort((a, b) => layers[b].area - layers[a].area)[0];
   const pat = Core.buildPattern(d.polys, d.unit, best);
@@ -1883,7 +1984,7 @@ async function addDXF(file) {
 const V = { renderer: null, scene: null, cam: null, ctl: null, mesh: null, geom: null, M: null, raf: 0, sel: null, region: null, pattern: null, file: null, base: null };
 function nextStl() {
   const f = state.stlQueue.shift(); if (!f) return;
-  f.arrayBuffer().then(buf => openStl(f, buf)).catch(err => { $('msg').textContent = `${f.name}: ${err.message}`; nextStl(); });
+  f.arrayBuffer().then(buf => openStl(f, buf)).catch(err => { $('msg').textContent = `${f.name}: ${msgOf(err)}`; nextStl(); });
 }
 function cssColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
@@ -1891,7 +1992,7 @@ function openStl(file, buf) {
   const pos = Core.parseSTL(buf);
   V.M = Core.makeMeshIndex(pos); V.file = file; V.sel = null; V.region = null; V.pattern = null;
   $('stlTitle').textContent = file.name; $('stlDl').disabled = $('stlUse').disabled = true;
-  $('stlInfo').textContent = `Modell: ${V.M.nt.toLocaleString('sv-SE')} trianglar. Klicka på den plana yta som ska bli DXF. Dra för att rotera, scrolla för att zooma, högerklicka och dra för att panorera.`;
+  setStlInfo();
   $('dlg').showModal();
   const host = $('viewer'); host.innerHTML = '';
   const T = THREE;
@@ -1922,6 +2023,11 @@ function openStl(file, buf) {
   const loop = () => { V.raf = requestAnimationFrame(loop); V.light.position.copy(V.cam.position); V.ctl.update(); V.renderer.render(V.scene, V.cam); };
   loop();
 }
+function setStlInfo() {
+  if (!V.M) return;
+  const p = V.sel != null ? V.pattern : null;
+  $('stlInfo').textContent = p ? (p.loops.length ? t('stlSel', fmt(p.w), fmt(p.h), p.loops.length - 1) : t('stlNone')) : t('stlIntro', V.M.nt.toLocaleString(t('locale')));
+}
 function resizeViewer() {
   if (!V.renderer) return; const h = $('viewer'), w = h.clientWidth, ht = h.clientHeight;
   V.renderer.setSize(w, ht); V.cam.aspect = w / ht; V.cam.updateProjectionMatrix();
@@ -1946,9 +2052,9 @@ function updateSelection() {
   try {
     V.pattern = Core.faceToPattern(V.M, V.region, parseFloat($('stlUnit').value));
     const p = V.pattern;
-    $('stlInfo').textContent = p.loops.length ? `Vald yta: ${fmt(p.w)} × ${fmt(p.h)} mm (roterad till minsta rektangel), ${p.loops.length - 1} hål/öppningar. Klicka på en annan yta för att byta.` : 'Ytan gav ingen kontur – prova en annan yta.';
+    setStlInfo();
     $('stlDl').disabled = $('stlUse').disabled = !p.loops.length;
-  } catch (err) { $('stlInfo').textContent = 'Kunde inte räkna ut ytan: ' + err.message; $('stlDl').disabled = $('stlUse').disabled = true; }
+  } catch (err) { $('stlInfo').textContent = t('stlFail') + err.message; $('stlDl').disabled = $('stlUse').disabled = true; }
 }
 $('stlTol').addEventListener('input', () => { $('tolOut').textContent = parseInt($('stlTol').value, 10) + '°'; updateSelection(); });
 $('stlUnit').addEventListener('change', updateSelection);
@@ -1965,10 +2071,10 @@ $('stlClose').onclick = $('stlSkip').onclick = closeStl;
 $('dlg').addEventListener('cancel', (e) => { e.preventDefault(); closeStl(); });
 $('stlUse').onclick = () => {
   const p = V.pattern; if (!p) return;
-  state.patterns.push({ id: state.nextId++, kind: 'stl', name: V.file.name.replace(/\.stl$/i, '') + '-yta', include: true, ...p });
+  state.patterns.push({ id: state.nextId++, kind: 'stl', name: V.file.name.replace(/\.stl$/i, '') + t('faceSuffix'), include: true, ...p });
   closeStl();
 };
-$('stlDl').onclick = () => { if (V.pattern) save(Core.toDXF([{ loops: V.pattern.loops }]), V.file.name.replace(/\.stl$/i, '') + '-yta.dxf', 'application/dxf'); };
+$('stlDl').onclick = () => { if (V.pattern) save(Core.toDXF([{ loops: V.pattern.loops }]), V.file.name.replace(/\.stl$/i, '') + t('faceSuffix') + '.dxf', 'application/dxf'); };
 
 /* ---------- nästling ---------- */
 function save(text, name, type) {
@@ -1980,33 +2086,37 @@ $('go').onclick = () => {
   const msg = $('msg'); msg.textContent = '';
   const W = parseFloat($('W').value), H = parseFloat($('H').value), gap = parseFloat($('gap').value) || 0, margin = parseFloat($('margin').value) || 0;
   const pats = state.patterns.filter(p => p.include && p.loops.length && p.w > 0 && p.h > 0);
-  if (!pats.length) { msg.textContent = 'Lägg till minst ett mönster först.'; return; }
-  if (!(W > 0 && H > 0)) { msg.textContent = 'Ange arbetsstyckets mått.'; return; }
+  if (!pats.length) { msg.textContent = t('addFirst'); return; }
+  if (!(W > 0 && H > 0)) { msg.textContent = t('enterSize'); return; }
   saveSettings();
-  $('go').disabled = true; $('go').textContent = 'Räknar…';
+  $('go').disabled = true; $('go').textContent = t('calc');
   setTimeout(() => {
     try {
       const r = Core.nest(pats, { W, H, gap, margin, rotate: $('rot').checked });
-      if (!r.parts.length) { msg.textContent = 'Ingen del får plats på arbetsstycket.'; $('res').hidden = true; return; }
+      if (!r.parts.length) { msg.textContent = t('noFit'); $('res').hidden = true; return; }
       state.result = { r, W, H, pats };
       showResult();
-    } catch (err) { msg.textContent = 'Fel: ' + err.message; }
-    finally { $('go').disabled = false; $('go').textContent = 'Fyll arbetsstycket'; }
+    } catch (err) { msg.textContent = t('errPrefix') + err.message; }
+    finally { $('go').disabled = false; $('go').textContent = t('go'); }
   }, 30);
 };
-function showResult() {
+function showResult(scroll = true) {
   const { r, W, H, pats } = state.result;
   const pct = 100 * r.used / r.total;
-  let rows = pats.map((p, i) => `<tr><td>${r.counts[i]} st</td><td>${esc(p.name)}</td><td>${fmt(p.w)} × ${fmt(p.h)} mm${r.counts[i] === 0 ? ' – <span style="color:var(--muted)">används inte i denna layout</span>' : ''}</td></tr>`).join('');
-  $('stats').innerHTML = `<div><span class="big">${fmt(pct)} %</span> av arbetsstycket täcks (${r.parts.length} delar)</div><table>${rows}</table>`;
+  let rows = pats.map((p, i) => `<tr><td>${r.counts[i]} ${t('pcs')}</td><td>${esc(p.name)}</td><td>${fmt(p.w)} × ${fmt(p.h)} mm${r.counts[i] === 0 ? ` – <span style="color:var(--muted)">${t('notUsed')}</span>` : ''}</td></tr>`).join('');
+  $('stats').innerHTML = `<div><span class="big">${fmt(pct)} %</span> ${t('cover', r.parts.length)}</div><table>${rows}</table>`;
   $('prev').innerHTML = Core.toSVG(r.parts, W, H);
-  $('res').hidden = false; $('res').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('res').hidden = false; if (scroll) $('res').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-const base = () => `nastlad_${state.result.W}x${state.result.H}`;
+const base = () => `${t('filePrefix')}${state.result.W}x${state.result.H}`;
 $('dDxf').onclick = () => save(Core.toDXF(state.result.r.parts), base() + '.dxf', 'application/dxf');
 $('dPdf').onclick = () => save(Core.toPDF(state.result.r.parts, state.result.W, state.result.H, { lineMm: parseFloat($('pdfW').value), color: $('pdfC').value, frame: $('pdfF').checked }), base() + '.pdf', 'application/pdf');
 $('dSvg').onclick = () => save(Core.toSVG(state.result.r.parts, state.result.W, state.result.H), base() + '.svg', 'image/svg+xml');
-renderList();
+document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => {
+  lang = b.dataset.lang; try { localStorage.setItem('nest_lang', lang); } catch (e) {}
+  $('msg').textContent = ''; applyStatic(); renderList(); if (state.result) showResult(false); if ($('dlg').open) setStlInfo();
+}));
+applyStatic(); renderList();
 </script>
 </body>
 </html>
