@@ -120,7 +120,7 @@ const I18N = {
     autoPart: 'Same face found on {0} of {1} files. {2} need manual selection – they open next.',
     engraveTitle: 'Engraving patterns (optional)',
     engraveNote:
-      'Add pattern images from pattern.monster (SVG works best, PNG and JPG also work). With several patterns each part gets the next one in turn; with one pattern all parts get it. The engraving goes into the PDF only.',
+      'Add pattern images from pattern.monster (SVG works best, PNG and JPG also work). With several patterns each part gets a random one of them; with one pattern all parts get it. The engraving goes into the PDF only.',
     engraveRepeat: '{0} × {1} mm per repeat',
     engraveOpts: 'Engraving:',
     engOnLabel: 'Engrave patterns',
@@ -266,7 +266,7 @@ const I18N = {
       'Samma yta hittades på {0} av {1} filer. {2} behöver väljas manuellt – de öppnas härnäst.',
     engraveTitle: 'Gravyrmönster (valfritt)',
     engraveNote:
-      'Lägg till mönsterbilder från pattern.monster (SVG fungerar bäst, PNG och JPG går också). Med flera mönster får varje del nästa mönster i tur och ordning; med ett mönster får alla delar det. Gravyren hamnar bara i PDF-filen.',
+      'Lägg till mönsterbilder från pattern.monster (SVG fungerar bäst, PNG och JPG går också). Med flera mönster får varje del ett slumpvis valt av dem; med ett mönster får alla delar det. Gravyren hamnar bara i PDF-filen.',
     engraveRepeat: '{0} × {1} mm per upprepning',
     engraveOpts: 'Gravyr:',
     engOnLabel: 'Gravera mönster',

@@ -153,17 +153,43 @@ const Engrave = (() => {
   }
 
   /**
-   * Renders the engraving of every part. Part i gets pattern i % patterns.length, so each tile
-   * differs from the next one when several patterns are given.
+   * Picks a random pattern for each part. The patterns are dealt like a shuffled deck, so all
+   * of them are used about equally often, and the same pattern never comes twice in a row
+   * (as long as there are at least two patterns).
+   */
+  function assign(partCount, patternCount, random = Math.random) {
+    const picks = [];
+    let deck = [];
+    while (picks.length < partCount) {
+      if (!deck.length) {
+        deck = Array.from({ length: patternCount }, (_, i) => i);
+        for (let i = deck.length - 1; i > 0; i--) {
+          const j = Math.floor(random() * (i + 1));
+          [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+        // Do not start the new deck with the pattern that ended the previous one.
+        const last = picks[picks.length - 1];
+        if (patternCount > 1 && deck[deck.length - 1] === last) {
+          [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]];
+        }
+      }
+      picks.push(deck.pop());
+    }
+    return picks;
+  }
+
+  /**
+   * Renders the engraving of every part, with a random pattern per part (see assign).
    * Returns an array of bitmaps (one per part); identical bitmaps are shared.
    */
   async function render(parts, patterns, opt, onProgress) {
     const cells = new Map();
     const cache = new Map();
     const images = [];
+    const picks = assign(parts.length, patterns.length);
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
-      const pi = i % patterns.length;
+      const pi = picks[i];
       const key = `${part.idx}|${part.rot ? 1 : 0}|${pi}`;
       if (!cache.has(key)) {
         // Lower the resolution if the part would need too many pixels.
@@ -182,5 +208,5 @@ const Engrave = (() => {
     return images;
   }
 
-  return { load, render, repeatMm, svgSize };
+  return { load, render, assign, repeatMm, svgSize };
 })();
