@@ -1,0 +1,604 @@
+/* CutRight – styles. Colours are defined as custom properties so that the dark theme only overrides them. */
+:root {
+  --bg: #f6f7f9;
+  --card: #fff;
+  --ink: #1b1f24;
+  --muted: #5d6670;
+  --line: #d9dde3;
+  --accent: #0b6bcb;
+  --accent-ink: #fff;
+  --cut: #d00;
+  --sheet: #fbfbfc;
+  --danger: #b42318;
+  --ok: #177245;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171a;
+    --card: #1e2327;
+    --ink: #e8ebee;
+    --muted: #9aa4ae;
+    --line: #333b42;
+    --accent: #4a9df0;
+    --accent-ink: #0b1117;
+    --cut: #ff6b5e;
+    --sheet: #101316;
+    --danger: #ff8a80;
+    --ok: #5fd08f;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  color-scheme: light dark;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    16px/1.5 system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+h1 {
+  font-size: 1.6rem;
+  margin: 0 0 4px;
+}
+.lead {
+  color: var(--muted);
+  margin: 0 0 24px;
+}
+section {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+h2 {
+  font-size: 1.05rem;
+  margin: 0 0 12px;
+}
+h2 .step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.85em;
+  margin-right: 8px;
+}
+.dropzone {
+  display: block;
+  border: 2px dashed var(--line);
+  border-radius: 10px;
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--muted);
+  cursor: pointer;
+  transition: 0.15s;
+}
+.dropzone:hover,
+.dropzone:focus-visible,
+.dropzone.over {
+  border-color: var(--accent);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  outline: none;
+}
+.dropzone b {
+  color: var(--ink);
+}
+.pattern-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.pattern {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+}
+.pattern.disabled {
+  opacity: 0.5;
+}
+.pattern svg {
+  width: 72px;
+  height: 72px;
+  background: var(--sheet);
+  border-radius: 6px;
+}
+.pattern svg path {
+  stroke: var(--cut);
+  fill: none;
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+.pattern .name {
+  font-weight: 600;
+  word-break: break-all;
+}
+.pattern .meta {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.pattern .warn {
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+.pattern select {
+  max-width: 100%;
+  font: inherit;
+  font-size: 0.88rem;
+}
+.pattern .act {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+label.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.92rem;
+}
+label.field small {
+  color: var(--muted);
+}
+input[type="number"],
+select {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  width: 100%;
+}
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.check-option {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 14px;
+  font-size: 0.95rem;
+}
+.check-option small {
+  color: var(--muted);
+  display: block;
+}
+button {
+  font: inherit;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+button:hover {
+  border-color: var(--accent);
+}
+button.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  font-weight: 600;
+  padding: 12px 22px;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+button.link {
+  border: none;
+  background: none;
+  color: var(--muted);
+  padding: 2px 4px;
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.message {
+  margin-top: 12px;
+  color: var(--danger);
+  min-height: 1.2em;
+}
+.preview {
+  margin-top: 14px;
+}
+.preview svg {
+  width: 100%;
+  height: auto;
+  max-height: 70vh;
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: block;
+}
+.preview svg path {
+  stroke: var(--cut);
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.2px;
+}
+.stats {
+  margin: 12px 0;
+}
+.stats .headline {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 0.95rem;
+}
+td,
+th {
+  padding: 4px 14px 4px 0;
+  text-align: left;
+}
+th {
+  color: var(--muted);
+  font-weight: 500;
+}
+.note {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin-top: 10px;
+}
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0;
+  background: var(--card);
+  color: var(--ink);
+  width: min(980px, 96vw);
+}
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.viewer {
+  height: min(56vh, 520px);
+  background: var(--sheet);
+  position: relative;
+  touch-action: none;
+}
+.viewer canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.dialog-controls {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  align-items: end;
+}
+.dialog-controls label,
+.dialog-controls .control {
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stl-info {
+  padding: 0 16px;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  min-height: 2.8em;
+}
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+footer {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-top: 20px;
+}
+.pdf-options {
+  margin-top: 10px;
+  gap: 14px;
+}
+
+.levels {
+  margin: 4px 0 14px;
+  max-width: 520px;
+}
+.levels .levels-label {
+  font-size: 0.92rem;
+}
+.levels output {
+  font-weight: 600;
+}
+.track {
+  position: relative;
+  padding-bottom: 22px;
+}
+.track input[type="range"] {
+  width: 100%;
+  margin: 6px 0 0;
+}
+.dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 30px;
+  height: 16px;
+}
+.dot {
+  position: absolute;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--card);
+  box-shadow: 0 0 0 1px var(--line);
+  padding: 0;
+  cursor: pointer;
+}
+.dot.sel {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.dot:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.dot.ghost {
+  top: 30px;
+  background: transparent;
+  border: 2px dashed var(--muted);
+  box-shadow: none;
+  pointer-events: none;
+}
+.level-hint[hidden] {
+  display: none;
+}
+.level-hint {
+  display: block;
+  color: var(--accent);
+  margin: 2px 0 6px;
+  font-weight: 600;
+}
+.proposals {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 6px 0 14px;
+}
+.proposal {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  background: var(--bg);
+  font-size: 0.88rem;
+}
+.proposal.sel {
+  background: var(--card);
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.proposal svg {
+  width: 100%;
+  height: 90px;
+  background: var(--sheet);
+  border-radius: 6px;
+}
+.proposal svg path {
+  stroke: var(--cut);
+  vector-effect: non-scaling-stroke;
+  stroke-width: 0.8px;
+}
+.proposal b {
+  font-size: 1rem;
+}
+.proposal .muted {
+  color: var(--muted);
+}
+.proposal.pending {
+  justify-content: center;
+  align-items: center;
+  color: var(--muted);
+  min-height: 150px;
+}
+.stale-note {
+  color: var(--danger);
+  font-size: 0.9rem;
+  margin: 0 0 10px;
+}
+.status-info {
+  color: var(--ok);
+  font-size: 0.92rem;
+  margin-top: 10px;
+  min-height: 0;
+}
+.list-tools {
+  margin-top: 10px;
+}
+button.accent {
+  border-color: var(--accent);
+}
+.help {
+  padding: 0 16px;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.help b {
+  color: var(--ink);
+  font-weight: 600;
+}
+label.field small {
+  line-height: 1.35;
+}
+.page-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+button.small {
+  padding: 5px 12px;
+  font-size: 0.85rem;
+  border-radius: 999px;
+  color: var(--muted);
+}
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 4px 3px 10px;
+  background: var(--card);
+  color: var(--muted);
+  flex: none;
+}
+.lang svg {
+  width: 16px;
+  height: 16px;
+}
+.lang button {
+  border: none;
+  background: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.lang button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+@media (max-width: 520px) {
+  .pattern {
+    grid-template-columns: 56px 1fr;
+  }
+  .pattern svg {
+    width: 56px;
+    height: 56px;
+  }
+  .pattern .act {
+    grid-column: 1/-1;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+.action-row {
+  margin-top: 18px;
+}
+input[type="number"].narrow-input {
+  width: 5.5em;
+}
+
+.dialog-controls .control {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 6px;
+}
+
+.dialog-controls .control input {
+  grid-column: 1 / -1;
+}
+
+/* Elements hidden via the hidden attribute must stay hidden even when a class sets display. */
+[hidden] {
+  display: none !important;
+}
+
+select.narrow-input {
+  width: auto;
+}
+
+.engrave {
+  margin-top: 14px;
+}
+
+.engrave h3 {
+  font-size: 0.95rem;
+  margin: 0 0 4px;
+}
+
+.engrave-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.engrave-item {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.engrave-item img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.engrave-item .name {
+  font-weight: 600;
+  word-break: break-all;
+}

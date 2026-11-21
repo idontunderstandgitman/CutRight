@@ -1,0 +1,14 @@
+{
+  "name": "cutright",
+  "version": "1.0.0",
+  "description": "Fill a workpiece with as many copies of your DXF/STL designs as possible. Runs entirely in the browser.",
+  "private": true,
+  "scripts": {
+    "format": "prettier --write .",
+    "check": "prettier --check . && html-validate index.html"
+  },
+  "devDependencies": {
+    "html-validate": "^9.7.1",
+    "prettier": "^3.9.10"
+  }
+}
